@@ -413,5 +413,26 @@ describe('parallel-routes-revalidation', () => {
         )
       })
     })
+
+    it('should not trigger a refresh for the page that is being redirected to', async () => {
+      const rscRequests = []
+      const browser = await next.browser('/redirect', {
+        beforePageLoad(page) {
+          page.on('request', async (req) => {
+            const headers = await req.allHeaders()
+            if (headers['rsc'] && !headers['next-router-prefetch']) {
+              const pathname = new URL(req.url()).pathname
+              rscRequests.push(pathname)
+            }
+          })
+        },
+      })
+
+      await browser.elementByCss('button').click()
+      await browser.waitForElementByCss('#root-page')
+      await browser.waitForIdleNetwork()
+
+      expect(rscRequests.length).toBe(0)
+    })
   })
 })
